@@ -4,7 +4,16 @@ function Show-EnhancedTasks {
         $tasks = Get-Task | Where-Object { $_.State -eq "Running" }
         $taskCount = $tasks.Count
         
+        # Count queued tasks (less than 13% complete)
+        $queuedTasks = $tasks | Where-Object { $_.PercentComplete -lt 13 }
+        $queuedCount = $queuedTasks.Count
+        
+        # Calculate active tasks (total minus queued)
+        $activeCount = $taskCount - $queuedCount
+        
         Write-Host "Total Running Tasks: $taskCount" -ForegroundColor Green
+        Write-Host "Queued Tasks (<13%): $queuedCount" -ForegroundColor Yellow
+        Write-Host "Active Tasks: $activeCount" -ForegroundColor Cyan
         Write-Host ""
         
         if ($taskCount -gt 0) {
