@@ -28,20 +28,21 @@ function Show-EnhancedTasks {
                     }
                 }
                 
-                # Get detailed properties from the task
-                $taskDetails = ($task | Get-Member -MemberType Property | 
-                               Where-Object { $_.Name -eq "Result" } | 
-                               ForEach-Object { $task.($_.Name) }) -join ", "
-                
-                # If no result, get the object being operated on
-                if ([string]::IsNullOrEmpty($taskDetails)) {
-                    $taskDetails = $task.ObjectId
+                # Get task progress details
+                $progress = "N/A"
+                if ($task.ExtensionData.Info.Progress) {
+                    $progress = $task.ExtensionData.Info.Progress
+                    
+                    # Add additional progress details if available
+                    if ($task.ExtensionData.Info.State -eq "running" -and $task.ExtensionData.Info.Progress -lt 100) {
+                        if ($task.ExtensionData.Info.TaskDetails) {
+                            $progress += " - " + $task.ExtensionData.Info.TaskDetails
+                        }
+                    }
                 }
                 
-                # If still no details, use the name of the operation
-                if ([string]::IsNullOrEmpty($taskDetails)) {
-                    $taskDetails = $task.Name
-                }
+                # Get task ID
+                $taskId = $task.Id.Split(':')[-1]
                 
                 # Try to get affected objects
                 $target = "N/A"
@@ -51,7 +52,8 @@ function Show-EnhancedTasks {
                 
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Details = $task.ObjectId
+                    TaskId = $taskId
+                    Progress = $progress
                     State = $task.State
                     Target = $target
                     PercentComplete = $task.PercentComplete
@@ -62,7 +64,7 @@ function Show-EnhancedTasks {
                 }
             }
             
-            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Details, State, Target, PercentComplete, VM, Datastore, StartTime, RunTime
+            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, TaskId, Progress, State, Target, PercentComplete, VM, Datastore, StartTime, RunTime
         } else {
             Write-Host "No running tasks found." -ForegroundColor Yellow
         }
