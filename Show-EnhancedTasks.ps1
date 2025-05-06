@@ -28,28 +28,30 @@ function Show-EnhancedTasks {
                     }
                 }
                 
-                # Get detailed task info
-                $taskView = Get-View $task.Id
-                $taskDetails = "N/A"
+                # Try to extract more detailed info from the task object
+                $taskInfo = $task.ExtensionData.Info
+                $taskDetails = $taskInfo.Name
                 
-                # Attempt to get more detailed information based on the task type
-                if ($taskView.Info.Reason) {
-                    $taskDetails = $taskView.Info.Reason.GetType().Name
-                }
-                
-                if ($taskView.Info.Key) {
-                    $taskDetails = $taskView.Info.Key
+                # Try to include args from the task if available
+                if ($taskInfo.Argument -and $taskInfo.Argument.Length -gt 0) {
+                    try {
+                        # Get the first argument that might contain useful info
+                        $firstArg = $taskInfo.Argument | Where-Object { $_ } | Select-Object -First 1
+                        if ($firstArg.Value) {
+                            $taskDetails += " - " + $firstArg.Value
+                        }
+                    } catch {}
                 }
                 
                 # Try to get affected objects
                 $target = "N/A"
-                if ($taskView.Info.EntityName) {
-                    $target = $taskView.Info.EntityName
+                if ($taskInfo.EntityName) {
+                    $target = $taskInfo.EntityName
                 }
                 
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Details = $taskView.Info.DescriptionId
+                    Details = $taskDetails
                     State = $task.State
                     Target = $target
                     PercentComplete = $task.PercentComplete
