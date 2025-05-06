@@ -28,30 +28,30 @@ function Show-EnhancedTasks {
                     }
                 }
                 
-                # Try to extract more detailed info from the task object
-                $taskInfo = $task.ExtensionData.Info
-                $taskDetails = $taskInfo.Name
+                # Get detailed properties from the task
+                $taskDetails = ($task | Get-Member -MemberType Property | 
+                               Where-Object { $_.Name -eq "Result" } | 
+                               ForEach-Object { $task.($_.Name) }) -join ", "
                 
-                # Try to include args from the task if available
-                if ($taskInfo.Argument -and $taskInfo.Argument.Length -gt 0) {
-                    try {
-                        # Get the first argument that might contain useful info
-                        $firstArg = $taskInfo.Argument | Where-Object { $_ } | Select-Object -First 1
-                        if ($firstArg.Value) {
-                            $taskDetails += " - " + $firstArg.Value
-                        }
-                    } catch {}
+                # If no result, get the object being operated on
+                if ([string]::IsNullOrEmpty($taskDetails)) {
+                    $taskDetails = $task.ObjectId
+                }
+                
+                # If still no details, use the name of the operation
+                if ([string]::IsNullOrEmpty($taskDetails)) {
+                    $taskDetails = $task.Name
                 }
                 
                 # Try to get affected objects
                 $target = "N/A"
-                if ($taskInfo.EntityName) {
-                    $target = $taskInfo.EntityName
+                if ($task.ExtensionData.Info.EntityName) {
+                    $target = $task.ExtensionData.Info.EntityName
                 }
                 
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Details = $taskDetails
+                    Details = $task.ObjectId
                     State = $task.State
                     Target = $target
                     PercentComplete = $task.PercentComplete
