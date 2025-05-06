@@ -11,13 +11,13 @@ function Show-EnhancedTasks {
             $enhancedTasks = $tasks | ForEach-Object {
                 $task = $_
                 $entity = $task.ExtensionData.Info.Entity
-                $details = $task.ExtensionData.Info.DescriptionId
                 
                 $vmName = "N/A"
                 $dsName = "N/A"
                 
                 if ($entity.Type -eq "VirtualMachine") {
-                    $vmName = (Get-View $entity).Name
+                    $vmView = Get-View $entity
+                    $vmName = $vmView.Name
                 }
                 
                 # Check if task description contains datastore info
@@ -28,22 +28,29 @@ function Show-EnhancedTasks {
                     }
                 }
                 
-                # Get additional task details from ExtensionData
-                $detailsText = if ($details) {
-                    $details
-                } else {
-                    $task.ExtensionData.Info.Name
+                # Get detailed task info
+                $taskView = Get-View $task.Id
+                $taskDetails = "N/A"
+                
+                # Attempt to get more detailed information based on the task type
+                if ($taskView.Info.Reason) {
+                    $taskDetails = $taskView.Info.Reason.GetType().Name
                 }
                 
-                # Try to get target object info
+                if ($taskView.Info.Key) {
+                    $taskDetails = $taskView.Info.Key
+                }
+                
+                # Try to get affected objects
                 $target = "N/A"
-                if ($task.ExtensionData.Info.EntityName) {
-                    $target = $task.ExtensionData.Info.EntityName
+                if ($taskView.Info.EntityName) {
+                    $target = $taskView.Info.EntityName
                 }
                 
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Details = $detailsText
+                    Details = $taskView.Info.DescriptionId
+                    State = $task.State
                     Target = $target
                     PercentComplete = $task.PercentComplete
                     VM = $vmName
@@ -53,7 +60,7 @@ function Show-EnhancedTasks {
                 }
             }
             
-            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Details, Target, PercentComplete, VM, Datastore, StartTime, RunTime
+            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Details, State, Target, PercentComplete, VM, Datastore, StartTime, RunTime
         } else {
             Write-Host "No running tasks found." -ForegroundColor Yellow
         }
