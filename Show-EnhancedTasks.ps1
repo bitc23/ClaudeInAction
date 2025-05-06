@@ -25,35 +25,15 @@ function Show-EnhancedTasks {
                 $dsName = "N/A"
                 
                 if ($entity.Type -eq "VirtualMachine") {
-                    try {
-                        $vm = Get-VM -Id $entity.Value -ErrorAction SilentlyContinue
-                        if ($vm) {
-                            $vmName = $vm.Name
-                            # Get the datastores for this VM
-                            $vmDatastores = $vm | Get-Datastore -ErrorAction SilentlyContinue
-                            if ($vmDatastores) {
-                                $dsName = ($vmDatastores | Select-Object -First 1).Name
-                                
-                                # If more than one datastore, indicate this
-                                if ($vmDatastores.Count -gt 1) {
-                                    $dsName += " + $($vmDatastores.Count - 1) more"
-                                }
-                            }
-                        } else {
-                            # Fallback to Get-View if Get-VM fails
-                            $vmView = Get-View $entity -ErrorAction SilentlyContinue
-                            if ($vmView) {
-                                $vmName = $vmView.Name
-                            }
-                        }
-                    } catch {
-                        # Fallback if an error occurs
-                        try {
-                            $vmView = Get-View $entity -ErrorAction SilentlyContinue
-                            if ($vmView) {
-                                $vmName = $vmView.Name
-                            }
-                        } catch {}
+                    $vmView = Get-View $entity
+                    $vmName = $vmView.Name
+                }
+                
+                # Check if task description contains datastore info
+                if ($task.Description -match "datastore") {
+                    $dsPattern = "'\[(.*?)\]'"
+                    if ($task.Description -match $dsPattern) {
+                        $dsName = $matches[1]
                     }
                 }
                 
