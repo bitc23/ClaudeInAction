@@ -11,6 +11,7 @@ function Show-EnhancedTasks {
             $enhancedTasks = $tasks | ForEach-Object {
                 $task = $_
                 $entity = $task.ExtensionData.Info.Entity
+                $details = $task.ExtensionData.Info.DescriptionId
                 
                 $vmName = "N/A"
                 $dsName = "N/A"
@@ -27,9 +28,23 @@ function Show-EnhancedTasks {
                     }
                 }
                 
+                # Get additional task details from ExtensionData
+                $detailsText = if ($details) {
+                    $details
+                } else {
+                    $task.ExtensionData.Info.Name
+                }
+                
+                # Try to get target object info
+                $target = "N/A"
+                if ($task.ExtensionData.Info.EntityName) {
+                    $target = $task.ExtensionData.Info.EntityName
+                }
+                
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Description = $task.Description
+                    Details = $detailsText
+                    Target = $target
                     PercentComplete = $task.PercentComplete
                     VM = $vmName
                     Datastore = $dsName
@@ -38,7 +53,7 @@ function Show-EnhancedTasks {
                 }
             }
             
-            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Description, PercentComplete, VM, Datastore, StartTime, RunTime
+            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Details, Target, PercentComplete, VM, Datastore, StartTime, RunTime
         } else {
             Write-Host "No running tasks found." -ForegroundColor Yellow
         }
