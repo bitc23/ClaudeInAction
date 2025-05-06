@@ -25,34 +25,40 @@ function Show-EnhancedTasks {
                 $dsName = "N/A"
                 
                 if ($entity.Type -eq "VirtualMachine") {
-                    $vmView = Get-View $entity
-                    $vmName = $vmView.Name
-                }
-                
-                # Check if task description contains datastore info
-                if ($task.Description -match "datastore") {
-                    $dsPattern = "'\[(.*?)\]'"
-                    if ($task.Description -match $dsPattern) {
-                        $dsName = $matches[1]
-                    }
-                }
-                
-                # Get task progress details
-                $progress = "N/A"
-                if ($task.ExtensionData.Info.Progress) {
-                    $progress = $task.ExtensionData.Info.Progress
-                    
-                    # Add additional progress details if available
-                    if ($task.ExtensionData.Info.State -eq "running" -and $task.ExtensionData.Info.Progress -lt 100) {
-                        if ($task.ExtensionData.Info.TaskDetails) {
-                            $progress += " - " + $task.ExtensionData.Info.TaskDetails
+                    try {
+                        $vm = Get-VM -Id $entity.Value -ErrorAction SilentlyContinue
+                        if ($vm) {
+                            $vmName = $vm.Name
+                            # Get the datastores for this VM
+                            $vmDatastores = $vm | Get-Datastore -ErrorAction SilentlyContinue
+                            if ($vmDatastores) {
+                                $dsName = ($vmDatastores | Select-Object -First 1).Name
+                                
+                                # If more than one datastore, indicate this
+                                if ($vmDatastores.Count -gt 1) {
+                                    $dsName += " + $($vmDatastores.Count - 1) more"
+                                }
+                            }
+                        } else {
+                            # Fallback to Get-View if Get-VM fails
+                            $vmView = Get-View $entity -ErrorAction SilentlyContinue
+                            if ($vmView) {
+                                $vmName = $vmView.Name
+                            }
                         }
+                    } catch {
+                        # Fallback if an error occurs
+                        try {
+                            $vmView = Get-View $entity -ErrorAction SilentlyContinue
+                            if ($vmView) {
+                                $vmName = $vmView.Name
+                            }
+                        } catch {}
                     }
                 }
                 
                 [PSCustomObject]@{
                     Name = $task.Name
-                    Progress = $progress
                     PercentComplete = $task.PercentComplete
                     VM = $vmName
                     Datastore = $dsName
@@ -61,7 +67,7 @@ function Show-EnhancedTasks {
                 }
             }
             
-            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Progress, PercentComplete, VM, Datastore, StartTime, RunTime
+            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, PercentComplete, VM, Datastore, StartTime, RunTime
         } else {
             Write-Host "No running tasks found." -ForegroundColor Yellow
         }
