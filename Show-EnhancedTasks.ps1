@@ -50,21 +50,9 @@ function Show-EnhancedTasks {
                     }
                 }
                 
-                # Get task ID
-                $taskId = $task.Id.Split(':')[-1]
-                
-                # Try to get affected objects
-                $target = "N/A"
-                if ($task.ExtensionData.Info.EntityName) {
-                    $target = $task.ExtensionData.Info.EntityName
-                }
-                
                 [PSCustomObject]@{
                     Name = $task.Name
-                    TaskId = $taskId
                     Progress = $progress
-                    State = $task.State
-                    Target = $target
                     PercentComplete = $task.PercentComplete
                     VM = $vmName
                     Datastore = $dsName
@@ -73,7 +61,7 @@ function Show-EnhancedTasks {
                 }
             }
             
-            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, TaskId, Progress, State, Target, PercentComplete, VM, Datastore, StartTime, RunTime
+            $enhancedTasks | Sort-Object -Property StartTime | Format-Table -AutoSize -Property Name, Progress, PercentComplete, VM, Datastore, StartTime, RunTime
         } else {
             Write-Host "No running tasks found." -ForegroundColor Yellow
         }
